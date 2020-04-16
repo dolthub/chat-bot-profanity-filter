@@ -51,7 +51,7 @@ Hello! This is a simple chat bot with profanity filter.
 Respond 'bye', or use CTRL+C to exit.
 You can type anything you want, and I will censor the bad words.
 Say something
-'''.lstrip()
+'''
 print(on_load_text)
 
 while KEEP_CHATTING:

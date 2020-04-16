@@ -1,6 +1,8 @@
 # chat-bot-profanity-filter
 
-The chat-bot-profanity-filter uses the [bad-words DoltHub dataset](https://www.dolthub.com/repositories/Liquidata/bad-words) to censor bad words between a user and the ChatBot. Try it for yourself:
+## The chat-bot-profanity-filter is a short python script that pulls data from [bad-words DoltHub dataset](https://www.dolthub.com/repositories/Liquidata/bad-words) to censor bad words between a user and the ChatBot. 
+
+### Try it for yourself:
 
 #### [Download Dolt](https://github.com/liquidata-inc/dolt#installation) if you don't already have it.
 

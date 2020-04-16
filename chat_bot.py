@@ -31,8 +31,12 @@ RESPONSES = ['Cool',
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('remote_name', help='The DoltHub remote from which to pull a set of bad words')
-    parser.add_argument('checkout_dir', help='The local directory to clone the remote to')
+    parser.add_argument('--remote-name',
+                        default='Liquidata/bad-words',
+                        help='The DoltHub remote from which to pull a set of bad words')
+    parser.add_argument('--checkout-dir',
+                        default='bad-words',
+                        help='The local directory to clonet the remote too')
     args = parser.parse_args()
 
     # Read in bad words

@@ -32,7 +32,7 @@ RESPONSES = ['Cool',
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('remote_name', help='The DoltHub remote from which to pull a set of bad words')
-    parser.add_argument('checkout_dir', help='The local directory to clonet the remote too')
+    parser.add_argument('checkout_dir', help='The local directory to clone the remote to')
     args = parser.parse_args()
 
     # Read in bad words
@@ -65,7 +65,7 @@ def chat_loop(bad_words_df):
 
 def clone_or_pull_latest(remote_name, checkout_dir):
     """
-    Clones the remote to the speicified location if checkout_dir/.dolt does not exist, pulls the latest otherwise
+    Clones the remote to the specified location if checkout_dir/.dolt does not exist, pulls the latest otherwise
     :param remote_name:
     :param checkout_dir:
     :return:

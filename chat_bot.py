@@ -2,14 +2,14 @@
 
 from time import sleep
 import random
-from doltpy.core import clone_repo
+from doltpy.core import Dolt, clone_repo
 import os
 
 
 def censor_text(text, bad_words_df):
     censored = False
     censored_text = text
-    for bad_word in bad_words_df['bad_word']
+    for bad_word in bad_words_df['bad_word']:
         # If `bad_word` exists as a substring of `text`, replace the substring with asterisks
         if text.find(bad_word) > -1:
             censored_text = censored_text.replace(bad_word, '*'*len(bad_word))
@@ -32,7 +32,18 @@ RESPONSES = ['Cool',
              "I don't care",
              "Whatever",
              "Sure"]
-repo = clone_repo('Liquidata/bad-words', 'bad-words-clone')
+
+
+CHECKOUT_DIR = 'bad-words-clone'
+
+def clone_or_pull_latest():
+    if os.path.exists(CHECKOUT_DIR):
+        repo = Dolt(CHECKOUT_DIR)
+        repo.pull()
+        return repo
+    else:
+        return clone_repo('Liquidata/bad-words', CHECKOUT_DIR)
+
 KEEP_CHATTING = True
 
 on_load_text = '''
@@ -44,6 +55,7 @@ Say something
 print(on_load_text)
 
 while KEEP_CHATTING:
+    repo = clone_or_pull_latest()
     bad_words_df = repo.read_table('bad_words')
     user_response = input("> Me: ")
     if user_response.lower() == "bye":

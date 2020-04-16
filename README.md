@@ -18,7 +18,7 @@ pip install doltpy
 ```
 git clone https://github.com/liquidata-inc/chat-bot-profanity-filter.git
 cd chat-bot-profanity-filter
-python chat-boy.py
+python chat-bot.py
 ```
 
 #### Example:

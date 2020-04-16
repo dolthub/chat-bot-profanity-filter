@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-from time import sleep
 import random
 from doltpy.core import Dolt, clone_repo
 import os

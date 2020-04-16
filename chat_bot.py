@@ -54,8 +54,8 @@ Say something
 '''
 print(on_load_text)
 
+repo = clone_or_pull_latest()
 while KEEP_CHATTING:
-    repo = clone_or_pull_latest()
     bad_words_df = repo.read_table('bad_words')
     user_response = input("> Me: ")
     if user_response.lower() == "bye":

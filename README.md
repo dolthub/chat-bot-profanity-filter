@@ -1,5 +1,5 @@
 ## chat-bot-profanity-filter
-A simple python script that pulls data from the [bad-words DoltHub dataset](https://www.dolthub.com/repositories/Liquidata/bad-words) to censor bad words between a user and the command line ChatBot. 
+A simple python script that pulls data from the [bad-words DoltHub dataset](https://www.dolthub.com/repositories/Liquidata/bad-words) to censor bad words between a user and the command line ChatBot. The goal of this example is to demonstrate how Dolt makes it simple to build data driven applications that pull live datasets, and do not introduce the prospect of latency. They also do not require users to maintain data infrastructure. 
 
 ### Try it for yourself:
 

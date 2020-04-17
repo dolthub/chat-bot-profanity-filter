@@ -20,7 +20,6 @@ git clone https://github.com/liquidata-inc/chat-bot-profanity-filter.git
 cd chat-bot-profanity-filter
 python chat-bot.py
 ```
-
 #### Example:
 ```
 Pulling latest bad-words...
@@ -41,3 +40,12 @@ Done pulling.
 > Me: bye
 > ChatBot: Thanks for chatting!
 ```
+
+
+#### Optional Arguments
+--remote-name will run the chat bot script against the specified Dolt remote. Defaults to 'Liquidata/bad-words'.
+
+--checkout-dir specifies where the Dolt repo will be cloned, or where it lives already. Defaults to 'bad-words'.
+
+`python chat_bot.py --remote-name='Someone-else/bad-words' --checkout-dir='bad-words-two'`.
+

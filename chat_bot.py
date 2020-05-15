@@ -2,6 +2,7 @@
 
 import random
 from doltpy.core import Dolt, clone_repo
+import mysql.connector
 import os
 import argparse
 
@@ -60,9 +61,9 @@ def main():
     # Read in bad words
     repo = clone_or_pull_latest(args.remote_name, args.checkout_dir)
     repo.start_server()
-    cnx = repo.get_connection()
+
+    cnx = mysql.connector.connect(user="root", host="127.0.0.1", port=3306, database="bad_words")
     cnx.autocommit = False
-    cnx.database = "bad_words"
 
     bad_words_df = repo.read_table(BAD_WORDS_TABLE)
     languages_df = repo.read_table(LANGUAGES_TABLE)

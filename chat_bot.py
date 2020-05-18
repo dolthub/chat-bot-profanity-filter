@@ -59,7 +59,7 @@ def main():
     args = parser.parse_args()
 
     # Read in bad words
-    repo = clone(args.remote_name, args.checkout_dir)
+    repo = clone_or_pull_latest(args.remote_name, args.checkout_dir)
     repo.start_server()
 
     cnx = None
@@ -107,7 +107,7 @@ def chat_loop(repo, cnx, language_codes):
             print("> ChatBot:", random.choice(RESPONSES))
 
 
-def clone(remote_name, checkout_dir):
+def clone_or_pull_latest(remote_name, checkout_dir):
     """
     Clones the remote to the specified location if checkout_dir/.dolt does not exist, pulls the latest otherwise
     :param remote_name:

@@ -1,13 +1,11 @@
 #!/usr/bin/env python
 
 import os
-import re
 import random
 import argparse
 import mysql.connector
 
 from doltpy.core import Dolt, clone_repo
-from string import punctuation
 
 ON_LOAD_TEXT = '''
 Hello! This is a simple chat bot with profanity filter.
@@ -63,6 +61,8 @@ def main():
     # Read in bad words
     repo = clone(args.remote_name, args.checkout_dir)
     repo.start_server()
+
+    cnx = None
 
     try:
         cnx = mysql.connector.connect(user="root", host="127.0.0.1", port=3306, database="bad_words")
@@ -130,7 +130,7 @@ def censor_text(text, repo, cnx):
     :param cnx:`
     :return:
     """
-    cursor = repo.query_server(BAD_WORDS_QUERY , cnx)
+    cursor = repo.query_server(BAD_WORDS_QUERY, cnx)
     bad_words = {row[0]: True for row in cursor}
 
     censored = False
@@ -185,7 +185,7 @@ def add_bad_word(repo, cnx, language_code, word):
     repo.query_server(query_str, cnx)
 
 
-def commit_new_bad_and_stop_server(repo, cnx):
+def commit_new_bad_and_stop_server(repo, cnx=None):
     """
     checks to see if any new bad words were added during the session. If there are the user will
     be prompted for a commit message for a new commit written to master.
@@ -194,21 +194,22 @@ def commit_new_bad_and_stop_server(repo, cnx):
     :return:
     """
     try:
-        cursor = repo.query_server(CHANGE_QUERY, cnx)
-        new_words = {row[0]: row[1] for row in cursor}
+        if cnx is not None:
+            cursor = repo.query_server(CHANGE_QUERY, cnx)
+            new_words = {row[0]: row[1] for row in cursor}
 
-        if len(new_words) > 0:
-            print('> ChatBot: %d new words added.' % len(new_words))
+            if len(new_words) > 0:
+                print('> ChatBot: %d new words added.' % len(new_words))
 
-            for word, language_code in new_words.items():
-                print("\tword: %16s, language code: %s" % (word, language_code))
+                for word, language_code in new_words.items():
+                    print("\tword: %16s, language code: %s" % (word, language_code))
 
-            print('> Chatbot: Add a description for these changes.')
+                print('> Chatbot: Add a description for these changes.')
 
-            commit_msg = input("> Me: ")
+                commit_msg = input("> Me: ")
 
-            repo.add_table_to_next_commit("bad_words")
-            repo.commit(commit_msg)
+                repo.add_table_to_next_commit("bad_words")
+                repo.commit(commit_msg)
     finally:
         repo.stop_server()
 

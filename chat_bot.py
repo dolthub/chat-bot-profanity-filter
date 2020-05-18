@@ -38,6 +38,10 @@ BAD_WORDS_TABLE = "bad_words"
 LANGUAGES_TABLE = "languages"
 NEW_BAD_WORD_STR = "!bad!"
 
+HAS_BAD = '''SELECT count(*)
+FROM bad_words
+WHERE language_code="%s" AND bad_word="%s";'''
+
 NEW_BAD_WORD_QUERY = '''INSERT INTO bad_words (language_code, bad_word) 
 VALUES ('%s','%s');'''
 
@@ -159,19 +163,15 @@ def process_new_bad(repo, cnx, language_codes, new_bad):
     :return:
     """
 
-    if len(new_bad) != 0:
-        words = new_bad.split()
-        if len(words) == 2:
-            language_code, bad_word = words[0], words[1]
-            if language_code in language_codes:
-                add_bad_word(repo, cnx, language_code, bad_word)
-                print("> ChatBot: New bad word '%s' will be reviewed." % bad_word)
-            else:
-                print("> ChatBot: Unknown language code '%s' talk to the admin about adding it." % language_code)
+    words = new_bad.split()
+    if len(words) > 1:
+        language_code, bad_word = words[0], ' '.join(words[1:])
+        if language_code in language_codes:
+            add_bad_word(repo, cnx, language_code, bad_word)
         else:
-            print("> ChatBot: Usage '%s <LANGUAGE_CODE> <WORD>'" % NEW_BAD_WORD_STR)
+            print("> ChatBot: Unknown language code '%s' talk to the admin about adding it." % language_code)
     else:
-        print("> ChatBot: Usage '%s <LANGUAGE_CODE> <WORD>'" % NEW_BAD_WORD_STR)
+        print("> ChatBot: Usage '%s <LANGUAGE_CODE> <WORD OR PHRASE>'" % NEW_BAD_WORD_STR)
 
 
 def add_bad_word(repo, cnx, language_code, word):
@@ -183,8 +183,17 @@ def add_bad_word(repo, cnx, language_code, word):
     :param word:
     :return:
     """
-    query_str = NEW_BAD_WORD_QUERY % (language_code, word)
-    repo.query_server(query_str, cnx)
+    query_str = HAS_BAD % (language_code, word)
+    cursor = repo.query_server(query_str, cnx)
+
+    row = cursor.next()
+
+    if row[0] == 0:
+        query_str = NEW_BAD_WORD_QUERY % (language_code, word)
+        repo.query_server(query_str, cnx)
+        print("> ChatBot: New bad word '%s' added. You can commit this upon exit." % word)
+    else:
+        print("> ChatBot: '%s' has already been added." % word)
 
 
 def commit_new_bad_and_stop_server(repo, cnx=None):
@@ -204,7 +213,7 @@ def commit_new_bad_and_stop_server(repo, cnx=None):
                 print('> ChatBot: %d new words added.' % len(new_words))
 
                 for word, language_code in new_words.items():
-                    print("\tword: %16s, language code: %s" % (word, language_code))
+                    print("     word: %16s, language code: %s" % (word, language_code))
 
                 print('> Chatbot: Add a description for these changes.')
 
@@ -212,6 +221,9 @@ def commit_new_bad_and_stop_server(repo, cnx=None):
 
                 repo.add_table_to_next_commit("bad_words")
                 repo.commit(commit_msg)
+
+                print('> Chatbot: These changes have been committed to your local master.')
+                print('>        : run "dolt push origin master:<branch>" and visit dolthub.com to create a PR')
     finally:
         repo.stop_server()
 

@@ -1,10 +1,13 @@
 #!/usr/bin/env python
 
-import random
-from doltpy.core import Dolt, clone_repo
-import mysql.connector
 import os
+import re
+import random
 import argparse
+import mysql.connector
+
+from doltpy.core import Dolt, clone_repo
+from string import punctuation
 
 ON_LOAD_TEXT = '''
 Hello! This is a simple chat bot with profanity filter.
@@ -34,18 +37,17 @@ EXIT_STR = "bye"
 
 BAD_WORDS_TABLE = "bad_words"
 LANGUAGES_TABLE = "languages"
-NEW_BAD_WORD_STR = "!youcantsaythat!"
+NEW_BAD_WORD_STR = "!bad!"
 
 NEW_BAD_WORD_QUERY = '''INSERT INTO bad_words (language_code, bad_word) 
 VALUES ('%s','%s');'''
 
-COMMIT_QUERY = '''UPDATE dolt_branches 
-SET hash=commit('%s') 
-WHERE name = 'master';'''
-
 CHANGE_QUERY = '''SELECT to_bad_word, to_language_code, from_bad_word, from_language_code
 FROM dolt_diff_bad_words 
 WHERE to_commit='WORKING';'''
+
+BAD_WORDS_QUERY = '''SELECT bad_word
+FROM bad_words;'''
 
 
 def main():
@@ -55,33 +57,31 @@ def main():
                         help='The DoltHub remote from which to pull a set of bad words')
     parser.add_argument('--checkout-dir',
                         default='bad-words',
-                        help='The local directory to clonet the remote too')
+                        help='The local directory to clone the remote too')
     args = parser.parse_args()
 
     # Read in bad words
-    repo = clone_or_pull_latest(args.remote_name, args.checkout_dir)
+    repo = clone(args.remote_name, args.checkout_dir)
     repo.start_server()
 
-    cnx = mysql.connector.connect(user="root", host="127.0.0.1", port=3306, database="bad_words")
-    cnx.autocommit = False
-
-    bad_words_df = repo.read_table(BAD_WORDS_TABLE)
-    languages_df = repo.read_table(LANGUAGES_TABLE)
-    language_codes = {x: True for x in languages_df['language_code']}
-
     try:
+        cnx = mysql.connector.connect(user="root", host="127.0.0.1", port=3306, database="bad_words")
+        cnx.autocommit = True
+
+        languages_df = repo.read_table(LANGUAGES_TABLE)
+        language_codes = {x: True for x in languages_df['language_code']}
+
         # Enter chat loop
-        chat_loop(repo, cnx, bad_words_df, language_codes)
+        chat_loop(repo, cnx, language_codes)
     finally:
-        commit_new_bad(repo, cnx)
+        commit_new_bad_and_stop_server(repo, cnx)
 
 
-def chat_loop(repo, cnx, bad_words_df, language_codes):
+def chat_loop(repo, cnx, language_codes):
     """
     Maintains a censored conversation with the user
     :param repo:
     :param cnx:
-    :param bad_words_df:
     :param language_codes:
     :return:
     """
@@ -101,13 +101,13 @@ def chat_loop(repo, cnx, bad_words_df, language_codes):
             new_bad = user_resp_lwr[len(NEW_BAD_WORD_STR):].strip()
             process_new_bad(repo, cnx, language_codes, new_bad)
         else:
-            censored_text, censored = censor_text(user_resp_lwr, bad_words_df)
+            censored_text, censored = censor_text(user_resp_lwr, repo, cnx)
             if censored:
                 print("> ChatBot sees:", censored_text)
             print("> ChatBot:", random.choice(RESPONSES))
 
 
-def clone_or_pull_latest(remote_name, checkout_dir):
+def clone(remote_name, checkout_dir):
     """
     Clones the remote to the specified location if checkout_dir/.dolt does not exist, pulls the latest otherwise
     :param remote_name:
@@ -122,20 +122,28 @@ def clone_or_pull_latest(remote_name, checkout_dir):
         return clone_repo(remote_name, checkout_dir)
 
 
-def censor_text(text, bad_words_df):
+def censor_text(text, repo, cnx):
     """
     Given the string text, uses the bad_words_df['bad_words'] to censor text, returns
     :param text:
-    :param bad_words_df:
+    :param repo:
+    :param cnx:`
     :return:
     """
+    cursor = repo.query_server(BAD_WORDS_QUERY , cnx)
+    bad_words = {row[0]: True for row in cursor}
+
     censored = False
     censored_text = text
-    for bad_word in bad_words_df['bad_word']:
+    for bad_word in bad_words.keys():
+        bad_len = len(bad_word)
+        pos = text.find(bad_word)
         # If `bad_word` exists as a substring of `text`, replace the substring with asterisks
-        if text.find(bad_word) > -1:
-            censored_text = censored_text.replace(bad_word, '*'*len(bad_word))
+        while pos != -1:
+            censored_text = censored_text[0:pos] + '*'*bad_len + censored_text[pos+bad_len:]
             censored = True
+            pos = text.find(bad_word, pos+1)
+
     return censored_text, censored
 
 
@@ -177,7 +185,7 @@ def add_bad_word(repo, cnx, language_code, word):
     repo.query_server(query_str, cnx)
 
 
-def commit_new_bad(repo, cnx):
+def commit_new_bad_and_stop_server(repo, cnx):
     """
     checks to see if any new bad words were added during the session. If there are the user will
     be prompted for a commit message for a new commit written to master.
@@ -185,20 +193,24 @@ def commit_new_bad(repo, cnx):
     :param cnx:
     :return:
     """
-    cursor = repo.query_server(CHANGE_QUERY, cnx)
-    new_words = {row[0]: row[1] for row in cursor}
+    try:
+        cursor = repo.query_server(CHANGE_QUERY, cnx)
+        new_words = {row[0]: row[1] for row in cursor}
 
-    if len(new_words) > 0:
-        print('> ChatBot: %d new words added.' % len(new_words))
+        if len(new_words) > 0:
+            print('> ChatBot: %d new words added.' % len(new_words))
 
-        for word, language_code in new_words.items():
-            print("\tword: %16s, language code: %s" % (word, language_code))
+            for word, language_code in new_words.items():
+                print("\tword: %16s, language code: %s" % (word, language_code))
 
-        print('> Chatbot: Add a description for these changes.')
+            print('> Chatbot: Add a description for these changes.')
 
-        commit_msg = input("> Me: ")
-        commit_query = COMMIT_QUERY % commit_msg
-        repo.query_server(commit_query, cnx)
+            commit_msg = input("> Me: ")
+
+            repo.add_table_to_next_commit("bad_words")
+            repo.commit(commit_msg)
+    finally:
+        repo.stop_server()
 
 
 if __name__ == '__main__':

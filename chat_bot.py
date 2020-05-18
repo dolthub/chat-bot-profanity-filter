@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import time
 import random
 import argparse
 import mysql.connector
@@ -61,6 +62,7 @@ def main():
     # Read in bad words
     repo = clone_or_pull_latest(args.remote_name, args.checkout_dir)
     repo.start_server()
+    time.sleep(1)
 
     cnx = None
 

@@ -63,7 +63,6 @@ def main():
                         help='The local directory to clone the remote too')
     args = parser.parse_args()
 
-    # Read in bad words
     repo = clone_or_pull_latest(args.remote_name, args.checkout_dir)
     repo.start_server()
     time.sleep(1)
